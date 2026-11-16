@@ -1,0 +1,79 @@
+package dev.tauri.rsjukeboxes.blockentity;
+
+import dev.tauri.rsjukeboxes.registry.BlockEntityRegistry;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.state.BlockState;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+
+public class RepeatingJukeboxBE extends AbstractRSJukeboxBE {
+    protected boolean isPowered = false;
+    protected int tickDelayCoef = 0;
+    protected int tickDelayAddition = 0;
+
+    @SuppressWarnings("unused")
+    public boolean isPowered() {
+        return isPowered;
+    }
+
+    public void setPowered(boolean powered) {
+        this.isPowered = powered;
+        setChanged();
+    }
+
+    public void setTickDelayCoef(int value) {
+        this.tickDelayCoef = value;
+        setChanged();
+    }
+
+    public void setTickDelayAddition(int value) {
+        this.tickDelayAddition = value;
+        setChanged();
+    }
+
+    public RepeatingJukeboxBE(BlockPos pPos, BlockState pBlockState) {
+        super(BlockEntityRegistry.REPEATING_JUKEBOX.get(), pPos, pBlockState);
+    }
+
+    @Override
+    public long getDelayBetweenRecords() {
+        return (16L * tickDelayCoef) + tickDelayAddition;
+    }
+
+    public static final int STOP_REDSTONE_LENGTH = 4; //ticks
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (level == null || level.isClientSide) return;
+        if (!isPlaying() && isPowered && hasPlayableItem) {
+            startPlaying();
+        }
+        if (isPlaying() && !isPowered) {
+            stopPlaying();
+        }
+        if(level.getGameTime() - playingStopped == (STOP_REDSTONE_LENGTH + 1)){
+            this.level.updateNeighborsAt(this.getBlockPos(), this.getBlockState().getBlock());
+        }
+    }
+
+    @Override
+    @ParametersAreNonnullByDefault
+    protected void loadAdditional(CompoundTag compound, HolderLookup.Provider registries) {
+        super.loadAdditional(compound, registries);
+        isPowered = compound.getBoolean("isPowered");
+        tickDelayCoef = compound.getInt("tickDelayCoef");
+        tickDelayAddition = compound.getInt("tickDelayAddition");
+    }
+
+    @Override
+    @ParametersAreNonnullByDefault
+    protected void saveAdditional(CompoundTag compound, HolderLookup.Provider registries) {
+        super.saveAdditional(compound, registries);
+        compound.putBoolean("isPowered", isPowered);
+        compound.putInt("tickDelayCoef", tickDelayCoef);
+        compound.putInt("tickDelayAddition", tickDelayAddition);
+    }
+}
